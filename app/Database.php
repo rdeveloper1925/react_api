@@ -72,22 +72,63 @@ class Database {
         }
     }
 
+
     public function insert($tablename,$data){
         try{
             $requiredFields=$this->getRequiredFields($tablename);
-            $missingFields=array();
-            foreach($requiredFields as $key){
-                if(!array_key_exists($key,$data)){
-                    $missingFields[]=ucwords($key);
-                }
-            }
-            if(!empty($missingFields)){
+            //CHECK for availability of all fields
+            if(is_array($missingFields=$this->sanitizeInputs($tablename,$data))){ //when it returns array then we have missing values
                 return "The following are required: ".implode(", ",$missingFields);
             }
+            //check for uniqueness of username
+            if($this->checkExists($tablename,"username",$data['username'])){
+                return "Selected Username already exists";
+            }
+            //now we know that all values required are present and username is unique
+            $query="INSERT INTO $tablename (";
+            $valuesPart="VALUES ("; //iterating the values part simultaneously
+            foreach($requiredFields as $k=>$field){
+                if($k==array_key_last($requiredFields)){ //closing the values part if this is the last iteration
+                    $query.="`$field`) ";
+                    $valuesPart .= ":$field)";
+                }else{
+                    $query.="`$field`, ";
+                    $valuesPart .= ":$field, ";
+                }
+            }
+            $query .= $valuesPart;
+            //now bind the params to the query
+            $stmt=$this->conn->prepare($query);
+            foreach($data as $key=>$value){
+                see([$key,$value]);
+                $stmt->bindParam(":$key",$value);
+            }
+            see($query);
+            $result=$stmt->execute();
+            see($result);
+            return $query;
         }catch(Exception $e){
             see($e);
         }
-        
+    }
 
+    public function sanitizeInputs($tablename,$data){
+        //checking for missing fields
+        $requiredFields=$this->getRequiredFields($tablename);
+        $missingFields=array();
+        foreach($requiredFields as $key){
+            if(!array_key_exists($key,$data)){ //checking that the key exists in the data supplied
+                $missingFields[]=ucwords($key);
+            }else{ //if it exists, proceed to check that it aint empty
+                if(is_null($data[$key])){
+                    $missingFields[]=ucwords($key);
+                }
+            }
+        }
+        if(!empty($missingFields)){
+            return $missingFields;
+        }else{
+            return true;
+        }
     }
 }

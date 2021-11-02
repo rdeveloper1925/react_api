@@ -39,3 +39,4 @@ SimpleRouter::get(BASE_URL."/", function (){
 });
 
 SimpleRouter::get(BASE_URL."/users","UsersController@index");
+SimpleRouter::get(BASE_URL."/users/{id}","UsersController@show");

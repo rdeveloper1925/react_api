@@ -31,3 +31,7 @@ function response(int $success,$data=[],$information="",$errors=""){
     );
     return json_encode($response);
 }
+
+function hash($pass){
+    return password_hash($pass,PASSWORD_ARGON2_DEFAULT_MEMORY_COST);
+}

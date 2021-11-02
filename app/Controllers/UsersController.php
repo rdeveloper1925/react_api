@@ -3,9 +3,18 @@
 include_once "PrimeController.php";
 //Handles Usermanagement
 class UsersController extends PrimeController{
-    
     //View all users
     public function index(){
+        $users=$this->conn->selectAll('users');
+        return response(1,$users);
+    }
+
+    public function show($id){
+        
+    }
+    
+    //View all users
+    public function index2(){
         $user2=array(
             'username'=>'Rick Matt',
             'firstName'=>"Rick",

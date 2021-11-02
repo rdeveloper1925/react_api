@@ -26,7 +26,8 @@ class Database {
             return $this->conn;
 
         } catch (PDOException $e) {
-            echo 'Connection error: ' . $e->getMessage();
+            echo response(0,[$e],"",$e->getMessage());
+            die();
         }    
     }
 
@@ -38,7 +39,8 @@ class Database {
             $result=$stmt->fetchAll();
             return ($result);
         }catch(Exception $e){
-            see($e);
+            echo response(0,[$e],"",$e->getMessage());
+            die();
         }
     }
 
@@ -56,7 +58,8 @@ class Database {
             $result=array_filter($result);
             return ($result);
         }catch(Exception $e){
-            see($e);
+            echo response(0,[$e],"",$e->getMessage());
+            die();
         }
     }
 
@@ -68,7 +71,8 @@ class Database {
             $stmt->execute();
             return $stmt->rowCount()>0 ? true : false;
         }catch(Exception $e){
-            see($e);
+            echo response(0,[$e],"",$e->getMessage());
+            die();
         }
     }
 
@@ -83,6 +87,11 @@ class Database {
             //check for uniqueness of username
             if($this->checkExists($tablename,"username",$data['username'])){
                 return "Selected Username already exists";
+            }
+            //handling passwords
+            if(array_key_exists('password',$data)){
+                $unhashed=$data['password'];
+                $data['password']=\password_hash($unhashed,PASSWORD_ARGON2_DEFAULT_TIME_COST);
             }
             //now we know that all values required are present and username is unique
             $query="INSERT INTO $tablename (";
@@ -99,16 +108,11 @@ class Database {
             $query .= $valuesPart;
             //now bind the params to the query
             $stmt=$this->conn->prepare($query);
-            foreach($data as $key=>$value){
-                see([$key,$value]);
-                $stmt->bindParam(":$key",$value);
-            }
-            see($query);
-            $result=$stmt->execute();
-            see($result);
-            return $query;
+            $result=$stmt->execute($data);
+            return $result;
         }catch(Exception $e){
-            see($e);
+            echo response(0,[$e],"",$e->getMessage());
+            die();
         }
     }
 
@@ -129,6 +133,21 @@ class Database {
             return $missingFields;
         }else{
             return true;
+        }
+    }
+
+    public function selectWhere($tablename, $conditions){ //['username'=>['=rodney'," and"]]
+        try{
+            $query="SELECT * FROM $tablename WHERE ";
+            //handling the conditions
+            foreach($conditions as $col=>$cond){
+                $query.= "$col ".$cond[0]." ".$cond[1];
+            }
+            $stmt=$this->conn->prepare($query);
+            $stmt->execute();
+        }catch(Exception $e){
+            echo response(0,[$e],"",$e->getMessage());
+            die();
         }
     }
 }

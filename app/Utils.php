@@ -12,6 +12,16 @@ function see($variable){
     return;
 }
 
+function seedie($variable){
+    $trace=debug_backtrace();
+    $cut_trace=array_shift($trace);
+    $line=$cut_trace['line'];
+    $file=$cut_trace['file'];
+    echo "Seeing var at Line: $line :: $file <br/><pre>".var_dump($variable)."</pre>";
+    die("because seedie");
+    return;
+}
+
 //STANDARD RESPONSE
 // {
 //     'success':0,
@@ -59,7 +69,7 @@ function validate($validateAs="string",$var){
             break;
 
         case "date":
-            $pregResult=preg_match("^\d{4}\-[0|1]\d\-[0|1|2|3]\d$",$var,$matches);
+            $pregResult=preg_match("(^\d{4}\-[0|1]\d\-[0|1|2|3]\d$)",$var,$matches);
             $result=!empty($pregResult)?true:false;
 
         default:

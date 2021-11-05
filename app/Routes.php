@@ -20,6 +20,9 @@ SimpleRouter::error(function(Request $request,Exception $exception){
         case "403":
             SimpleRouter::response()->redirect(BASE_URL."/unauthorized");
             break;
+
+        default:
+            return response(0,$exception,$exception->getMessage());
     }
 });
 
@@ -30,7 +33,7 @@ SimpleRouter::all(BASE_URL."/not-found", function(){
 
 //ROUTE FOR 403 UNAUTHORIZED
 SimpleRouter::all(BASE_URL."/unauthorized", function(){
-    return response(0,null,"Unauthorized Access","You are not allowed to view the information requested");
+    return response(0,null,"Unauthorized Access","You are not allowed to view the information requested. Check that you have access or the request method");
 });
 
 //Primary route
@@ -39,5 +42,6 @@ SimpleRouter::get(BASE_URL."/", function (){
 });
 
 SimpleRouter::get(BASE_URL."/users","UsersController@index");
-SimpleRouter::get(BASE_URL."/users/{id}","UsersController@show");
+SimpleRouter::get(BASE_URL."/users/{username}","UsersController@show");
 SimpleRouter::post(BASE_URL."/users/create","UsersController@create");
+SimpleRouter::put(BASE_URL."/users/{username}","UsersController@edit");

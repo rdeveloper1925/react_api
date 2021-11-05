@@ -1,8 +1,24 @@
 <?php
-
 include_once "PrimeController.php";
+use Rakit\Validation\Validator;
 //Handles Usermanagement
 class UsersController extends PrimeController{
+    //Create new user
+    public function create(){
+        $data=input();
+        $validator=new Validator();
+        $validation=$validator->make($data,array(
+            "email"=>"required|email",
+            "birthDate"=>"required"
+        ));
+        $validation->validate();
+        if($validation->fails()){
+            return response(0,implode(", ",$validation->errors()),"Data validation failed");
+        }
+        $response=$this->conn->insert("users",input());
+        return $response;
+    }
+
     //View all users
     public function index(){
         $users=$this->conn->selectAll('users');

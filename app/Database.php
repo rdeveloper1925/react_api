@@ -82,16 +82,21 @@ class Database {
             $requiredFields=$this->getRequiredFields($tablename);
             //CHECK for availability of all fields
             if(is_array($missingFields=$this->sanitizeInputs($tablename,$data))){ //when it returns array then we have missing values
-                return "The following are required: ".implode(", ",$missingFields);
+                return response(0,[],"The following are required: ".implode(", ",$missingFields),"The following are required: ".implode(", ",$missingFields));
             }
             //check for uniqueness of username
             if($this->checkExists($tablename,"username",$data['username'])){
-                return "Selected Username already exists";
+                return response(0,[],"Selected Username already exists","Selected Username already exists");
+            }
+            //validate date coz its more prone to mistakes
+            if(!validate("date",$data["birthDate"])){
+                $msg="Malformed birth date";
+                return response(0,[],"","Selected Username already exists");
             }
             //handling passwords
             if(array_key_exists('password',$data)){
                 $unhashed=$data['password'];
-                $data['password']=\password_hash($unhashed,PASSWORD_ARGON2_DEFAULT_TIME_COST);
+                $data['password']=mask($unhashed);
             }
             //now we know that all values required are present and username is unique
             $query="INSERT INTO $tablename (";
@@ -109,7 +114,8 @@ class Database {
             //now bind the params to the query
             $stmt=$this->conn->prepare($query);
             $result=$stmt->execute($data);
-            return $result;
+            unset($data["password"]);
+            return $result?response(true,$data,"User Created Successfully!"):response(0,[],"Sorry! An unknown error occured","Sorry! An unknown error occured");
         }catch(Exception $e){
             echo response(0,[$e],"",$e->getMessage());
             die();

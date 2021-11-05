@@ -2,6 +2,7 @@
     
     "require": {
         "pecee/simple-router": "4.3.7.2",
-        "katzgrau/klogger": "dev-master"
+        "katzgrau/klogger": "dev-master",
+        "rakit/validation": "^1.4"
     }
 }

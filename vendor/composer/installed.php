@@ -6,7 +6,7 @@
     'aliases' => 
     array (
     ),
-    'reference' => '54569458738295aae6d3fea15f2348a673c2abef',
+    'reference' => '59e00fb0986db0655b962ce173e2f08604f93a95',
     'name' => '__root__',
   ),
   'versions' => 
@@ -18,7 +18,7 @@
       'aliases' => 
       array (
       ),
-      'reference' => '54569458738295aae6d3fea15f2348a673c2abef',
+      'reference' => '59e00fb0986db0655b962ce173e2f08604f93a95',
     ),
     'katzgrau/klogger' => 
     array (
@@ -47,6 +47,15 @@
       array (
       ),
       'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
+    ),
+    'rakit/validation' => 
+    array (
+      'pretty_version' => 'v1.4.0',
+      'version' => '1.4.0.0',
+      'aliases' => 
+      array (
+      ),
+      'reference' => 'ff003a35cdf5030a5f2482299f4c93f344a35b29',
     ),
   ),
 );

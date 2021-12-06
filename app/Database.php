@@ -249,7 +249,6 @@ class Database {
             //seedie($query);
             $stmt=$this->conn->prepare($query);
             $result=$stmt->execute(array_merge($data,$condition));
-            var_dump([$result, $stmt->rowCount()    ]);
             if($stmt->rowCount() > 0 && $result){ //query success and a row updated
                 return $this->selectWhere($tablename,$condition);
             }else if($stmt->rowCount() <= 0 ){ //query success but no row updated

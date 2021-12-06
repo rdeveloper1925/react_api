@@ -4,7 +4,7 @@ namespace App;
 use Exception;
 use PDO, PDOException;
 
-include_once "Config.php";
+// include_once "Config.php";
 include_once "Utils.php";
 
 //Holds prime fuctions relating to the database
@@ -13,7 +13,7 @@ class Database {
     public function __construct(){
         try {
             $host="localhost";
-            $db="react_api";
+            $db="api";
             $pass="";
             $user="root";
             $dsn = "mysql:dbname=$db;host=$host";
@@ -26,7 +26,7 @@ class Database {
             return $this->conn;
 
         } catch (PDOException $e) {
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }    
     }
@@ -44,7 +44,7 @@ class Database {
             }
             return ($result);
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
     }
@@ -63,11 +63,12 @@ class Database {
             $result=array_filter($result);
             return ($result);
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
     }
 
+    //checks if a value exists for a given field ($criteria)
     public function checkExists($tablename,$criteria,$value){
         try{
             $query="SELECT * FROM $tablename WHERE $criteria=:value";
@@ -76,9 +77,32 @@ class Database {
             $stmt->execute();
             return $stmt->rowCount()>0 ? true : false;
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
+    }
+
+    public function checkUniqueness($tablename,$data){
+        try{
+            error_reporting(0); //will throw a warning if id is not contained in the data
+            $cols=$this->getCols($tablename);
+            $duplicates=array();
+            foreach($cols as $col){
+                if($this->isUnique($tablename,$col) && $this->checkExists($tablename,$col,$data[$col])){ //if the column is meant to be unique
+                    array_push($duplicates,ucwords($col));
+                }
+            }
+            if(!empty($duplicates)){
+                $msg="The following values provided already exist in the db: ".implode(", ",$duplicates);
+                throw new Exception($msg,3);
+            }else{
+                return true;
+            }
+        }catch(Exception $e){
+            echo response(0,(array) $e,"",$e->getMessage());
+            die();
+        }
+        
     }
 
     public function insert($tablename,$data){
@@ -86,22 +110,18 @@ class Database {
             $requiredFields=$this->getRequiredFields($tablename);
             //CHECK for availability of all fields
             if(is_array($missingFields=$this->sanitizeInputs($tablename,$data))){ //when it returns array then we have missing values
-                return response(0,[],"The following are required: ".implode(", ",$missingFields),"The following are required: ".implode(", ",$missingFields));
+                $msg="The following are required: ".implode(", ",$missingFields);
+                throw new Exception($msg,4);
             }
-            //check for uniqueness of username
-            if($this->checkExists($tablename,"username",$data['username'])){
-                return response(0,[],"Selected Username already exists","Selected Username already exists");
-            }
-            //validate date coz its more prone to mistakes
-            if(!validate("date",$data["birthDate"])){
-                $msg="Malformed birth date";
-                return response(0,[],"$msg","$msg");
-            }
+            //check for unique fields and if their unique constraint isnt violated.
+            $this->checkUniqueness($tablename,$data); 
+
             //handling passwords
             if(array_key_exists('password',$data)){
                 $unhashed=$data['password'];
                 $data['password']=mask($unhashed);
             }
+
             //now we know that all values required are present and username is unique
             $query="INSERT INTO $tablename (";
             $valuesPart="VALUES ("; //iterating the values part simultaneously
@@ -119,11 +139,41 @@ class Database {
             $stmt=$this->conn->prepare($query);
             $result=$stmt->execute($data);
             unset($data["password"]);
-            return $result?response(true,$data,"User Created Successfully!"):response(0,[],"Sorry! An unknown error occured","Sorry! An unknown error occured");
+            return $result;
+            //return $result?response(true,$data,"User Created Successfully!"):response(0,[],"Sorry! An unknown error occured","Sorry! An unknown error occured");
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
+    }
+
+    //Gets all the columns of a table
+    public function getCols($tablename){
+        try{
+            $query="show columns from $tablename";
+            $stmt=$this->conn->prepare($query);
+            $stmt->execute();
+            $result=$stmt->fetchAll(PDO::FETCH_COLUMN,0); //fetching from one column
+            return ($result);
+            
+        }catch(Exception $e){
+            echo response(0,(array) $e,"",$e->getMessage());
+            die();
+        }
+    }
+
+    //Checks if column only accepts unique data
+    public function isUnique($tablename,$column){
+        try{
+            $query="show index from $tablename where column_name='$column' and non_unique='0' ";
+            $stmt=$this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->rowCount()>0 ? true : false;
+        }catch(Exception $e){
+            echo response(0,(array) $e,"",$e->getMessage());
+            die();
+        }
+
     }
 
     public function sanitizeInputs($tablename,$data){
@@ -167,22 +217,20 @@ class Database {
             }
             return $result;
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
     }
 
-    public function update($tablename,$data,$condition=array()){
+    public function update($tablename,$data,$condition=array(),$glue="and"){
         try{
             //dont update if condition is empty or data is empty
             if(empty($condition) || empty($data)){
-                $msg="Looks like we have a missing condition for this update. Aborting Now";
-                echo response(0,$data,$msg,$msg);die();
+                throw new Exception("Looks like we have a missing condition for this update. Aborting Now",2);
             }
             //check that the keys match db cols
             if(!empty($unexpectedCols=$this->checkCols($tablename,$data))){
-                $msg="Found the following unexpected fields. Please remove from request: ".implode(", ",$unexpectedCols);
-                echo response(0,$data,"$msg",$msg);die();
+                throw new Exception("Found the following unexpected fields. Please remove from request: ".implode(", ",$unexpectedCols),2);
             }
             //creating a separate dataset without the condition being shown in the set clause
             $overallData=$data;
@@ -196,14 +244,22 @@ class Database {
             $query="UPDATE $tablename SET ";
             $query .= $this->implementFillables($data); //implementing the fields to be updated/set
             $query.=" where ";
-            $query .= $this->implementFillables($condition,"and");
+            $query .= $this->implementFillables($condition,$glue);
             //see([$data,$condition]);
             //seedie($query);
             $stmt=$this->conn->prepare($query);
             $result=$stmt->execute(array_merge($data,$condition));
-            return array($result,$this->selectWhere($tablename,$condition));
+            var_dump([$result, $stmt->rowCount()    ]);
+            if($stmt->rowCount() > 0 && $result){ //query success and a row updated
+                return $this->selectWhere($tablename,$condition);
+            }else if($stmt->rowCount() <= 0 ){ //query success but no row updated
+                echo response(1,$this->selectWhere($tablename,$condition),"No Data was updated.");
+                die();
+            }else{ //general error
+                throw new Exception("The update either failed or could not match a row to update",2);
+            }
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
     }
@@ -227,7 +283,7 @@ class Database {
             }
             return ($unexpectedKeys);
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
     }
@@ -240,7 +296,7 @@ class Database {
             $result=$stmt->fetchAll();
             see([$result,$rs]);
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
     }
@@ -254,7 +310,7 @@ class Database {
             $result=$stmt->execute($condition);
             return response($result,[],"The user has been deleted successfully");
         }catch(Exception $e){
-            echo response(0,[$e],"",$e->getMessage());
+            echo response(0,(array) $e,"",$e->getMessage());
             die();
         }
     }
@@ -286,17 +342,7 @@ class Database {
         return $conditionPart;
     }
 
-    //#######################################################################################################
-    //offers standardized json responses across the api
-    function response(int $success,$data=[],$information="",$errors=""){
-        $response=array(
-            "success"=>$success,
-            "message"=>array(
-                "information"=>$information,
-                "data"=>$data,
-                "errors"=>$errors
-            )
-        );
-        return json_encode($response);
-    }
+    
 }
+
+//#######################################################################################################

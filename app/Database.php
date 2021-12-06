@@ -285,4 +285,18 @@ class Database {
         }
         return $conditionPart;
     }
+
+    //#######################################################################################################
+    //offers standardized json responses across the api
+    function response(int $success,$data=[],$information="",$errors=""){
+        $response=array(
+            "success"=>$success,
+            "message"=>array(
+                "information"=>$information,
+                "data"=>$data,
+                "errors"=>$errors
+            )
+        );
+        return json_encode($response);
+    }
 }
